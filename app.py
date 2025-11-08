@@ -7,20 +7,25 @@ import matplotlib.dates as mdates
 import os
 from dotenv import load_dotenv
 
+# =============================================
+# 🔒 Load Environment Variables
+# =============================================
+# For local use (.env), and Streamlit Cloud (st.secrets)
 load_dotenv()
 
-# Adafruit IO Credentials
-AIO_USERNAME = "emon4075"
-AIO_KEY = os.getenv("AIO_KEY")
+AIO_USERNAME = os.getenv("AIO_USERNAME", st.secrets.get("AIO_USERNAME", "emon4075"))
+AIO_KEY = os.getenv("AIO_KEY", st.secrets.get("AIO_KEY", None))
 
-#  Feed Keys
+# =============================================
+# 🧠 Feed Configuration
+# =============================================
 TEMP_FEED_KEY = "temperature"
 HUMID_FEED_KEY = "humidity"
-
-# Configuration
 LIMIT = 500
 
-
+# =============================================
+# 📡 Fetch Feed Data
+# =============================================
 @st.cache_data(ttl=600)
 def get_feed_data(feed_key, limit=LIMIT):
     url = f"https://io.adafruit.com/api/v2/{AIO_USERNAME}/feeds/{feed_key}/data"
@@ -34,14 +39,14 @@ def get_feed_data(feed_key, limit=LIMIT):
         st.error(f"Error fetching data for {feed_key}: {e}")
         return None
 
-
+# =============================================
+# ⚙️ Process Feed Data
+# =============================================
 def process_data(data):
     times, values = [], []
     for entry in data:
         try:
-            dt = datetime.datetime.fromisoformat(
-                entry["created_at"].replace("Z", "+00:00")
-            )
+            dt = datetime.datetime.fromisoformat(entry["created_at"].replace("Z", "+00:00"))
             times.append(dt)
             values.append(float(entry["value"]))
         except Exception as e:
@@ -52,16 +57,19 @@ def process_data(data):
         .reset_index(drop=True)
     )
 
-
+# =============================================
+# 📊 Main Dashboard Function
+# =============================================
 def create_dashboard():
     st.set_page_config(layout="wide", page_title="DHT11 Dashboard", page_icon="📈")
     st.title("🌡️💧 ESP32 DHT11 Temperature and Humidity Dashboard")
 
     st.markdown(
-        "Real-time data from ESP32 via Adafruit IO. Visualized using Matplotlib + Streamlit."
+        "Real-time data from ESP32 via Adafruit IO. "
+        "Visualized using Matplotlib + Streamlit."
     )
 
-    # Sidebar Settings
+    # Sidebar
     st.sidebar.header("Settings")
     st.sidebar.write(f"Showing last {LIMIT} data points")
 
@@ -70,32 +78,36 @@ def create_dashboard():
         st.cache_data.clear()
         st.rerun()
 
-    # Apply Theme
-    if theme == "Light":
-        plt.style.use("Solarize_Light2")
-    else:
-        plt.style.use("dark_background")
+    # Theme
+    plt.style.use("Solarize_Light2" if theme == "Light" else "dark_background")
 
-    # Fetch Data
+    # =============================================
+    # 🧩 Debug Info (optional)
+    # =============================================
+    with st.sidebar.expander("🔍 Debug Info"):
+        st.write("Username:", AIO_USERNAME)
+        st.write("Key loaded:", "✅ Yes" if AIO_KEY else "❌ Missing")
+
+    # =============================================
+    # 📡 Fetch & Process Data
+    # =============================================
     temp_data_raw = get_feed_data(TEMP_FEED_KEY)
     humid_data_raw = get_feed_data(HUMID_FEED_KEY)
 
-    if temp_data_raw is None and humid_data_raw is None:
-        st.error(
-            "Unable to fetch data from Adafruit IO. Check your credentials or network."
-        )
+    if temp_data_raw is None or humid_data_raw is None:
+        st.error("Unable to fetch data from Adafruit IO. Check your credentials or network.")
         return
 
     temp_df = process_data(temp_data_raw or [])
     humid_df = process_data(humid_data_raw or [])
 
     if temp_df.empty and humid_df.empty:
-        st.warning(
-            "No valid data available. Ensure your ESP32 is uploading to Adafruit IO."
-        )
+        st.warning("No valid data available. Ensure your ESP32 is uploading to Adafruit IO.")
         return
 
-    #  Plotting
+    # =============================================
+    # 📈 Plot
+    # =============================================
     st.subheader("📊 Temperature and Humidity Over Time")
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
@@ -127,9 +139,7 @@ def create_dashboard():
         ax2.tick_params(axis="y", labelcolor="blue")
         ax2.set_ylim(60, 90)
 
-    ax1.set_title(
-        "ESP32 DHT11 Sensor Readings Over Time", fontsize=16, fontweight="bold"
-    )
+    ax1.set_title("ESP32 DHT11 Sensor Readings Over Time", fontsize=16, fontweight="bold")
 
     formatter = mdates.DateFormatter("%Y-%m-%d %H:%M")
     ax1.xaxis.set_major_formatter(formatter)
@@ -143,8 +153,9 @@ def create_dashboard():
     st.pyplot(fig)
     plt.close(fig)
 
-    # Raw Data Display
-    st.markdown("")
+    # =============================================
+    # 📄 Raw Data Tables
+    # =============================================
     st.subheader("📄 Raw Data")
     col1, col2 = st.columns(2)
 
@@ -160,5 +171,8 @@ def create_dashboard():
     st.caption("Data Source: Adafruit IO")
 
 
+# =============================================
+# 🚀 Run App
+# =============================================
 if __name__ == "__main__":
     create_dashboard()

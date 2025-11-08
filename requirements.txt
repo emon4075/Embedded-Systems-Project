@@ -1,0 +1,15 @@
+# Core dashboard framework
+streamlit==1.39.0
+
+# Data handling
+pandas==2.2.3
+requests==2.32.3
+
+# Visualization
+matplotlib==3.9.2
+
+# Environment variable support
+python-dotenv==1.0.1
+
+# Date/time utilities (optional, but helps if you expand functionality)
+pytz==2024.1

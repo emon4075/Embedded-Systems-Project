@@ -7,25 +7,18 @@ import matplotlib.dates as mdates
 import os
 from dotenv import load_dotenv
 
-# =============================================
-# 🔒 Load Environment Variables
-# =============================================
-# For local use (.env), and Streamlit Cloud (st.secrets)
+# Load Environment Variables
 load_dotenv()
 
 AIO_USERNAME = os.getenv("AIO_USERNAME", st.secrets.get("AIO_USERNAME", "emon4075"))
 AIO_KEY = os.getenv("AIO_KEY", st.secrets.get("AIO_KEY", None))
 
-# =============================================
-# 🧠 Feed Configuration
-# =============================================
+# Feed Configuration
 TEMP_FEED_KEY = "temperature"
 HUMID_FEED_KEY = "humidity"
 LIMIT = 500
 
-# =============================================
-# 📡 Fetch Feed Data
-# =============================================
+# Fetch Feed Data
 @st.cache_data(ttl=600)
 def get_feed_data(feed_key, limit=LIMIT):
     url = f"https://io.adafruit.com/api/v2/{AIO_USERNAME}/feeds/{feed_key}/data"
@@ -39,9 +32,7 @@ def get_feed_data(feed_key, limit=LIMIT):
         st.error(f"Error fetching data for {feed_key}: {e}")
         return None
 
-# =============================================
 # ⚙️ Process Feed Data
-# =============================================
 def process_data(data):
     times, values = [], []
     for entry in data:
@@ -57,9 +48,7 @@ def process_data(data):
         .reset_index(drop=True)
     )
 
-# =============================================
 # 📊 Main Dashboard Function
-# =============================================
 def create_dashboard():
     st.set_page_config(layout="wide", page_title="DHT11 Dashboard", page_icon="📈")
     st.title("🌡️💧 ESP32 DHT11 Temperature and Humidity Dashboard")
@@ -81,16 +70,12 @@ def create_dashboard():
     # Theme
     plt.style.use("Solarize_Light2" if theme == "Light" else "dark_background")
 
-    # =============================================
-    # 🧩 Debug Info (optional)
-    # =============================================
+    # Debug Info (optional)
     with st.sidebar.expander("🔍 Debug Info"):
         st.write("Username:", AIO_USERNAME)
         st.write("Key loaded:", "✅ Yes" if AIO_KEY else "❌ Missing")
 
-    # =============================================
-    # 📡 Fetch & Process Data
-    # =============================================
+    # Fetch & Process Data
     temp_data_raw = get_feed_data(TEMP_FEED_KEY)
     humid_data_raw = get_feed_data(HUMID_FEED_KEY)
 
@@ -105,9 +90,7 @@ def create_dashboard():
         st.warning("No valid data available. Ensure your ESP32 is uploading to Adafruit IO.")
         return
 
-    # =============================================
-    # 📈 Plot
-    # =============================================
+    # Plot
     st.subheader("📊 Temperature and Humidity Over Time")
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
@@ -153,9 +136,7 @@ def create_dashboard():
     st.pyplot(fig)
     plt.close(fig)
 
-    # =============================================
-    # 📄 Raw Data Tables
-    # =============================================
+    # Raw Data Tables
     st.subheader("📄 Raw Data")
     col1, col2 = st.columns(2)
 
@@ -170,9 +151,5 @@ def create_dashboard():
     st.markdown("")
     st.caption("Data Source: Adafruit IO")
 
-
-# =============================================
-# 🚀 Run App
-# =============================================
 if __name__ == "__main__":
     create_dashboard()
